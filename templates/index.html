@@ -1,339 +1,1162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Malaria Detection</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MalariaAI — Cell Detection System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Display:wght@400;500;700&family=Google+Sans+Mono&display=swap" rel="stylesheet" />
+  <!-- Fallback fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+  <style>
+    /* ─── TOKENS ─── */
+    :root {
+      --bg-base:        #0d1117;
+      --bg-surface:     #161b22;
+      --bg-elevated:    #1c2330;
+      --bg-card:        #21262d;
+      --bg-card-hover:  #262d36;
+      --border:         rgba(255,255,255,0.08);
+      --border-focus:   rgba(100,210,255,0.5);
 
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            width: 100%;
-            max-width: 520px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
+      --cyan:           #4fc3f7;
+      --cyan-dim:       rgba(79,195,247,0.12);
+      --cyan-glow:      rgba(79,195,247,0.25);
+      --red:            #ef5350;
+      --red-dim:        rgba(239,83,80,0.12);
+      --green:          #66bb6a;
+      --green-dim:      rgba(102,187,106,0.12);
+      --amber:          #ffa726;
 
-        h1 {
-            text-align: center;
-            color: #333;
-            font-size: 1.7rem;
-            margin-bottom: 8px;
-        }
+      --text-primary:   #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted:     #4a5568;
 
-        .subtitle {
-            text-align: center;
-            color: #888;
-            font-size: 0.9rem;
-            margin-bottom: 30px;
-        }
+      --radius-sm:      8px;
+      --radius-md:      16px;
+      --radius-lg:      24px;
+      --radius-xl:      32px;
 
-        /* Model status badge */
-        .status-badge {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        .badge.ok  { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .badge.err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+      --font-display:   'Nunito', 'Google Sans Display', sans-serif;
+      --font-body:      'Nunito', 'Google Sans', sans-serif;
+      --font-mono:      'Space Mono', 'Google Sans Mono', monospace;
 
-        /* Upload area */
-        .upload-area {
-            border: 2px dashed #ccc;
-            border-radius: 12px;
-            padding: 35px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-            background: #fafafa;
-        }
-        .upload-area:hover { border-color: #667eea; background: #f0f2ff; }
-        .upload-area.dragover { border-color: #667eea; background: #e8ecff; }
+      --shadow-card:    0 4px 24px rgba(0,0,0,0.4);
+      --shadow-glow:    0 0 40px rgba(79,195,247,0.15);
+    }
 
-        .upload-icon { font-size: 3rem; margin-bottom: 10px; }
-        .upload-area p { color: #666; margin: 5px 0; }
-        .upload-area .hint { font-size: 0.8rem; color: #aaa; }
+    /* ─── RESET ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        #file-input { display: none; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-        /* Preview */
-        #preview-section { display: none; margin-bottom: 20px; text-align: center; }
-        #preview-img {
-            max-width: 100%;
-            max-height: 220px;
-            border-radius: 10px;
-            border: 2px solid #eee;
-        }
-        #file-name { font-size: 0.85rem; color: #666; margin-top: 8px; }
+    /* ─── BACKGROUND MESH ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% 10%, rgba(79,195,247,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(239,83,80,0.05) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, rgba(102,187,106,0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-        /* Button */
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.3s;
-        }
-        .btn:hover   { opacity: 0.9; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* ─── GRID OVERLAY ─── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
 
-        /* Result box */
-        #result-section { display: none; margin-top: 25px; }
+    /* ─── LAYOUT ─── */
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
 
-        .result-box {
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-        }
-        .result-box.parasitized { background: #fff0f0; border: 2px solid #ffcccc; }
-        .result-box.uninfected  { background: #f0fff4; border: 2px solid #b2f2c8; }
+    /* ─── HEADER ─── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 56px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
 
-        .result-label {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .result-box.parasitized .result-label { color: #c0392b; }
-        .result-box.uninfected  .result-label { color: #27ae60; }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-        .result-icon  { font-size: 2.5rem; margin-bottom: 8px; }
-        .confidence   { font-size: 1rem; color: #555; margin-bottom: 14px; }
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--cyan), #0288d1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 16px rgba(79,195,247,0.3);
+    }
 
-        /* Probability bars */
-        .prob-row { margin: 6px 0; text-align: left; }
-        .prob-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.82rem;
-            color: #555;
-            margin-bottom: 3px;
-        }
-        .prob-bar-bg {
-            background: #eee;
-            border-radius: 6px;
-            height: 8px;
-            overflow: hidden;
-        }
-        .prob-bar-fill {
-            height: 100%;
-            border-radius: 6px;
-            transition: width 0.6s ease;
-        }
-        .bar-red   { background: #e74c3c; }
-        .bar-green { background: #2ecc71; }
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--text-primary);
+    }
 
-        .timestamp { font-size: 0.75rem; color: #aaa; margin-top: 12px; }
+    .logo-text span { color: var(--cyan); }
 
-        /* Reset button */
-        .btn-reset {
-            width: 100%;
-            margin-top: 12px;
-            padding: 10px;
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-reset:hover { background: #f0f2ff; }
+    .header-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: var(--cyan-dim);
+      border: 1px solid rgba(79,195,247,0.2);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--cyan);
+      letter-spacing: 0.5px;
+    }
 
-        /* Loading spinner */
-        .spinner {
-            display: inline-block;
-            width: 18px; height: 18px;
-            border: 3px solid rgba(255,255,255,0.4);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+    .pulse-dot {
+      width: 7px; height: 7px;
+      background: var(--cyan);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      text-align: center;
+      margin-bottom: 52px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(30px, 4vw, 48px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--cyan), #80deea);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ─── ERROR BANNER ─── */
+    .error-banner {
+      background: rgba(239,83,80,0.1);
+      border: 1px solid rgba(239,83,80,0.3);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #ef9a9a;
+      margin-bottom: 32px;
+    }
+
+    /* ─── MAIN GRID ─── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 720px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ─── CARD BASE ─── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow-card);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-label::before {
+      content: '';
+      width: 16px; height: 2px;
+      background: var(--cyan);
+      border-radius: 2px;
+    }
+
+    /* ─── UPLOAD ZONE ─── */
+    .upload-zone {
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: var(--radius-md);
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-surface);
+    }
+
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, var(--cyan-dim), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .upload-zone:hover::before,
+    .upload-zone.drag-over::before {
+      opacity: 1;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 4px var(--cyan-glow);
+    }
+
+    .upload-zone.drag-over {
+      border-style: solid;
+      transform: scale(1.01);
+    }
+
+    .upload-icon {
+      width: 56px; height: 56px;
+      background: var(--cyan-dim);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 22px;
+      transition: transform 0.3s;
+    }
+
+    .upload-zone:hover .upload-icon { transform: scale(1.1) translateY(-2px); }
+
+    .upload-zone h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .upload-zone p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 20px;
+      background: var(--cyan);
+      color: #0d1117;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      border: none;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      background: #81d4fa;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(79,195,247,0.35);
+    }
+
+    #fileInput { display: none; }
+
+    /* ─── PREVIEW ─── */
+    .preview-wrap {
+      margin-top: 20px;
+      display: none;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+      background: var(--bg-surface);
+    }
+
+    .preview-wrap.show { display: block; animation: fadeIn 0.3s ease; }
+
+    .preview-wrap img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .preview-meta {
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+    }
+
+    .preview-remove {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .preview-remove:hover { color: var(--red); }
+
+    /* ─── ANALYZE BUTTON ─── */
+    .btn-analyze {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--cyan), #0288d1);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-analyze::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-analyze:hover:not(:disabled)::before { opacity: 1; }
+    .btn-analyze:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(79,195,247,0.35);
+    }
+
+    .btn-analyze:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── RESULT CARD ─── */
+    .result-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: 420px;
+    }
+
+    /* Empty state */
+    .result-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .result-empty-icon {
+      font-size: 40px;
+      opacity: 0.3;
+      margin-bottom: 4px;
+    }
+
+    .result-empty p {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 180px;
+      line-height: 1.5;
+    }
+
+    /* Result content */
+    .result-content { display: none; flex-direction: column; gap: 20px; }
+    .result-content.show { display: flex; animation: fadeUp 0.4s ease both; }
+
+    /* Verdict chip */
+    .verdict-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px 6px 8px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      width: fit-content;
+    }
+
+    .verdict-chip.parasitized {
+      background: var(--red-dim);
+      color: #ef9a9a;
+      border: 1px solid rgba(239,83,80,0.25);
+    }
+
+    .verdict-chip.uninfected {
+      background: var(--green-dim);
+      color: #a5d6a7;
+      border: 1px solid rgba(102,187,106,0.25);
+    }
+
+    .verdict-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .parasitized .verdict-dot { background: var(--red); box-shadow: 0 0 8px rgba(239,83,80,0.6); }
+    .uninfected .verdict-dot { background: var(--green); box-shadow: 0 0 8px rgba(102,187,106,0.6); }
+
+    /* Big confidence */
+    .confidence-big {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      line-height: 1;
+    }
+
+    .confidence-num {
+      font-family: var(--font-display);
+      font-size: 64px;
+      font-weight: 800;
+      letter-spacing: -3px;
+      line-height: 1;
+    }
+
+    .confidence-num.parasitized { color: var(--red); }
+    .confidence-num.uninfected { color: var(--green); }
+
+    .confidence-unit {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      padding-bottom: 10px;
+    }
+
+    .confidence-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ─── PROB BARS ─── */
+    .prob-bars { display: flex; flex-direction: column; gap: 10px; }
+
+    .prob-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .prob-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .prob-name { font-weight: 600; color: var(--text-secondary); }
+    .prob-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+    .prob-val.red-text { color: var(--red); }
+    .prob-val.green-text { color: var(--green); }
+
+    .prob-track {
+      height: 8px;
+      background: var(--bg-surface);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .prob-fill {
+      height: 100%;
+      border-radius: 100px;
+      width: 0%;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .prob-fill.red { background: linear-gradient(90deg, #c62828, var(--red)); }
+    .prob-fill.green { background: linear-gradient(90deg, #2e7d32, var(--green)); }
+
+    /* Divider */
+    .result-divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Meta row */
+    .result-meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .meta-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .meta-pill span { font-family: var(--font-mono); color: var(--text-primary); }
+
+    /* ─── INFO SECTION ─── */
+    .info-section {
+      margin-top: 48px;
+      animation: fadeUp 0.8s ease 0.2s both;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .section-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .section-divider {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .info-grid { grid-template-columns: 1fr; }
+    }
+
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .info-card:hover {
+      border-color: rgba(79,195,247,0.2);
+      transform: translateY(-2px);
+    }
+
+    .info-icon {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    .info-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .info-body {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .info-stat {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 4px;
+    }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 3px; }
+  </style>
 </head>
 <body>
-<div class="container">
 
-    <h1>🔬 Malaria Detection</h1>
-    <p class="subtitle">Upload a blood smear image to detect malaria infection</p>
+<div class="app">
 
-    <!-- Model status -->
-    <div class="status-badge">
-        {% if model_loaded %}
-            <span class="badge ok">✅ Model Ready</span>
-        {% else %}
-            <span class="badge err">❌ Model Not Loaded — {{ error }}</span>
-        {% endif %}
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔬</div>
+      <div class="logo-text">Malaria<span>AI</span></div>
+    </div>
+    <div class="header-badge">
+      <div class="pulse-dot"></div>
+      {% if model_loaded %}
+        Model Active
+      {% else %}
+        Model Offline
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-tag">🧬 Deep Learning · NIH Dataset · CNN</div>
+    <h1>Detect Malaria in<br><em>Blood Smear Cells</em></h1>
+    <p>Upload a microscopic cell image and our CNN model will instantly classify it as Parasitized or Uninfected with confidence scoring.</p>
+  </section>
+
+  <!-- ── ERROR BANNER ── -->
+  {% if error %}
+  <div class="error-banner">
+    ⚠️ &nbsp;<strong>Model Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+
+  <!-- ── DIAGNOSTICS BAR ── -->
+  <div id="diagBar" style="
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  ">
+    <span style="font-weight:700;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;font-size:10px">System Status</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span id="diagModel" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block"></span>
+      <span id="diagModelTxt" style="color:var(--text-secondary)">Checking model…</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span id="diagServer" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block"></span>
+      <span id="diagServerTxt" style="color:var(--text-secondary)">Pinging server…</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span id="diagFile" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block"></span>
+      <span id="diagFileTxt" style="color:var(--text-secondary)">No file selected</span>
+    </div>
+  </div>
+
+  <!-- ── MAIN GRID ── -->
+  <div class="main-grid">
+
+    <!-- Upload Card -->
+    <div class="card">
+      <div class="card-label">Image Input</div>
+
+      <div class="upload-zone" id="dropZone" onclick="triggerFilePick(event)">
+        <div class="upload-icon">🩸</div>
+        <h3>Drop your cell image</h3>
+        <p>PNG or JPG · Max 16 MB · 128×128 recommended</p>
+        <button class="upload-btn" id="browseBtn" type="button">
+          ↑ Browse Files
+        </button>
+      </div>
+
+      <div class="preview-wrap" id="previewWrap">
+        <img id="previewImg" src="" alt="Cell preview" />
+        <div class="preview-meta">
+          <span id="fileName">—</span>
+          <button class="preview-remove" id="removeBtn" title="Remove">✕</button>
+        </div>
+      </div>
+
+      <button class="btn-analyze" id="analyzeBtn" disabled>
+        <div class="spinner" id="spinner"></div>
+        <span id="btnText">🔍 &nbsp;Analyze Cell</span>
+      </button>
     </div>
 
-    <!-- Upload area -->
-    <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
-        <div class="upload-icon">📁</div>
-        <p><strong>Click to upload</strong> or drag & drop</p>
-        <p class="hint">PNG, JPG, JPEG supported</p>
-    </div>
-    <input type="file" id="file-input" accept="image/*">
+    <!-- Result Card -->
+    <div class="result-card">
+      <div class="card-label">Analysis Result</div>
 
-    <!-- Image preview -->
-    <div id="preview-section">
-        <img id="preview-img" src="" alt="Preview">
-        <p id="file-name"></p>
-    </div>
+      <div class="result-empty" id="resultEmpty">
+        <div class="result-empty-icon">🔬</div>
+        <p>Upload a blood smear image to begin analysis</p>
+      </div>
 
-    <!-- Predict button -->
-    <button class="btn" id="predict-btn" onclick="predict()" disabled>
-        Analyse Image
-    </button>
+      <div class="result-content" id="resultContent">
 
-    <!-- Result -->
-    <div id="result-section">
-        <div class="result-box" id="result-box">
-            <div class="result-icon" id="result-icon"></div>
-            <div class="result-label" id="result-label"></div>
-            <div class="confidence"  id="confidence-text"></div>
-
-            <div class="prob-row">
-                <div class="prob-label">
-                    <span>🔴 Parasitized</span>
-                    <span id="para-pct"></span>
-                </div>
-                <div class="prob-bar-bg">
-                    <div class="prob-bar-fill bar-red" id="para-bar" style="width:0%"></div>
-                </div>
-            </div>
-
-            <div class="prob-row">
-                <div class="prob-label">
-                    <span>🟢 Uninfected</span>
-                    <span id="uninf-pct"></span>
-                </div>
-                <div class="prob-bar-bg">
-                    <div class="prob-bar-fill bar-green" id="uninf-bar" style="width:0%"></div>
-                </div>
-            </div>
-
-            <div class="timestamp" id="timestamp"></div>
+        <div id="verdictChip" class="verdict-chip">
+          <div class="verdict-dot"></div>
+          <span id="verdictLabel">—</span>
         </div>
 
-        <button class="btn-reset" onclick="reset()">🔄 Analyse Another Image</button>
+        <div>
+          <div class="confidence-big">
+            <div class="confidence-num" id="confidenceNum">0</div>
+            <div class="confidence-unit">%</div>
+          </div>
+          <div class="confidence-label">Confidence Score</div>
+        </div>
+
+        <div class="result-divider"></div>
+
+        <div class="prob-bars">
+          <div class="prob-row">
+            <div class="prob-header">
+              <span class="prob-name">Parasitized</span>
+              <span class="prob-val red-text" id="pParasitized">0%</span>
+            </div>
+            <div class="prob-track">
+              <div class="prob-fill red" id="barParasitized"></div>
+            </div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-header">
+              <span class="prob-name">Uninfected</span>
+              <span class="prob-val green-text" id="pUninfected">0%</span>
+            </div>
+            <div class="prob-track">
+              <div class="prob-fill green" id="barUninfected"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-divider"></div>
+
+        <div class="result-meta">
+          <div class="meta-pill">🕐 <span id="metaTime">—</span></div>
+          <div class="meta-pill">📁 <span id="metaFile">—</span></div>
+        </div>
+
+      </div>
     </div>
 
+  </div><!-- /main-grid -->
+
+  <!-- ── INFO SECTION ── -->
+  <div class="info-section">
+    <div class="section-header">
+      <h2>About This System</h2>
+      <div class="section-divider"></div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-icon">🧠</div>
+        <div class="info-stat">&gt; 95%</div>
+        <div class="info-title">Model Accuracy</div>
+        <div class="info-body">Trained on the NIH malaria cell dataset using Custom CNN and MobileNetV2 transfer learning architectures.</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">📊</div>
+        <div class="info-stat">27,558</div>
+        <div class="info-title">Training Images</div>
+        <div class="info-body">13,779 parasitized and 13,779 uninfected blood smear cell images from the NIH dataset, 80/20 train-val split.</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">⚡</div>
+        <div class="info-stat">&lt; 3s</div>
+        <div class="info-title">Inference Speed</div>
+        <div class="info-body">Sub-3-second classification on standard CPU hardware. Binary output with confidence score from 0–100%.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+
+<!-- Hidden file input lives here, OUTSIDE any overflow:hidden container -->
+<input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.bmp,.gif,.tiff" style="position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;" />
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast">
+  <span id="toastMsg">—</span>
 </div>
 
 <script>
-    let selectedFile = null;
+  /* ── State ── */
+  let selectedFile = null;
 
-    // File input change
-    document.getElementById('file-input').addEventListener('change', function(e) {
-        handleFile(e.target.files[0]);
-    });
+  /* ── Elements ── */
+  const fileInput   = document.getElementById('fileInput');
+  const dropZone    = document.getElementById('dropZone');
+  const previewWrap = document.getElementById('previewWrap');
+  const previewImg  = document.getElementById('previewImg');
+  const fileName    = document.getElementById('fileName');
+  const removeBtn   = document.getElementById('removeBtn');
+  const analyzeBtn  = document.getElementById('analyzeBtn');
+  const spinner     = document.getElementById('spinner');
+  const btnText     = document.getElementById('btnText');
+  const resultEmpty   = document.getElementById('resultEmpty');
+  const resultContent = document.getElementById('resultContent');
 
-    // Drag and drop
-    const uploadArea = document.getElementById('upload-area');
-    uploadArea.addEventListener('dragover',  (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-    uploadArea.addEventListener('dragleave', ()  => uploadArea.classList.remove('dragover'));
-    uploadArea.addEventListener('drop',      (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        handleFile(e.dataTransfer.files[0]);
-    });
+  /* ── Trigger file pick — works from zone click or button ── */
+  function triggerFilePick(e) {
+    // Don't double-fire if user clicked the button itself
+    if (e && e.target.closest('#browseBtn')) return;
+    fileInput.click();
+  }
 
-    function handleFile(file) {
-        if (!file) return;
-        selectedFile = file;
+  document.getElementById('browseBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
 
-        // Show preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('preview-img').src = e.target.result;
-            document.getElementById('file-name').textContent = file.name;
-            document.getElementById('preview-section').style.display = 'block';
-            document.getElementById('result-section').style.display  = 'none';
-        };
-        reader.readAsDataURL(file);
+  /* ── Drag & Drop ── */
+  ['dragenter','dragover'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
+  );
+  ['dragleave','drop'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
 
-        document.getElementById('predict-btn').disabled = false;
+  /* ── File Input change ── */
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) {
+      handleFile(fileInput.files[0]);
     }
+  });
 
-    async function predict() {
-        if (!selectedFile) return;
-
-        const btn = document.getElementById('predict-btn');
-        btn.disabled   = true;
-        btn.innerHTML  = '<span class="spinner"></span> Analysing...';
-
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
-        try {
-            const response = await fetch('/predict', { method: 'POST', body: formData });
-            const data     = await response.json();
-
-            if (data.success) {
-                showResult(data);
-            } else {
-                alert('Error: ' + data.error);
-            }
-        } catch (err) {
-            alert('Request failed: ' + err);
-        }
-
-        btn.disabled  = false;
-        btn.innerHTML = 'Analyse Image';
+  /* ── Handle File ── */
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+      showToast('⚠️ Please upload an image file (PNG, JPG, BMP).');
+      return;
     }
+    selectedFile = file;
 
-    function showResult(data) {
-        const isParasitized = data.prediction === 'Parasitized';
-        const box           = document.getElementById('result-box');
+    // Update diagnostics
+    setDiag('diagFile', 'cyan', '📎 ' + (file.name.length > 22 ? file.name.slice(0,22)+'…' : file.name));
 
-        box.className = 'result-box ' + (isParasitized ? 'parasitized' : 'uninfected');
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      fileName.textContent = file.name.length > 28 ? file.name.slice(0, 28) + '…' : file.name;
+      previewWrap.classList.add('show');
+      analyzeBtn.disabled = false;
+    };
+    reader.onerror = () => showToast('⚠️ Could not read file.');
+    reader.readAsDataURL(file);
+  }
 
-        document.getElementById('result-icon').textContent      = isParasitized ? '🔴' : '🟢';
-        document.getElementById('result-label').textContent     = data.prediction;
-        document.getElementById('confidence-text').textContent  = `Confidence: ${data.confidence}%`;
-        document.getElementById('para-pct').textContent         = data.parasitized_probability + '%';
-        document.getElementById('uninf-pct').textContent        = data.uninfected_probability  + '%';
-        document.getElementById('para-bar').style.width         = data.parasitized_probability + '%';
-        document.getElementById('uninf-bar').style.width        = data.uninfected_probability  + '%';
-        document.getElementById('timestamp').textContent        = '🕐 ' + data.timestamp;
+  /* ── Remove ── */
+  removeBtn.addEventListener('click', () => {
+    selectedFile = null;
+    previewImg.src = '';
+    previewWrap.classList.remove('show');
+    fileInput.value = '';
+    analyzeBtn.disabled = true;
+    resetResult();
+    hideInlineError();
+    setDiag('diagFile', '#555', 'No file selected');
+  });
 
-        document.getElementById('result-section').style.display = 'block';
+  /* ── Analyze ── */
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    analyzeBtn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Analyzing…';
+    resetResult();
+    hideInlineError();
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: formData });
+      let data;
+      try {
+        data = await res.json();
+      } catch(parseErr) {
+        showInlineError('Server returned non-JSON response (HTTP ' + res.status + '). Check Flask terminal for traceback.');
+        return;
+      }
+
+      if (data.success) {
+        showResult(data);
+        setDiag('diagFile', 'green', '✅ ' + (selectedFile.name.length > 18 ? selectedFile.name.slice(0,18)+'…' : selectedFile.name));
+      } else {
+        showInlineError(data.error || 'Prediction failed — unknown error.');
+      }
+    } catch (err) {
+      showInlineError('Cannot connect to Flask server. Is it running on port 5000?<br><code style="font-size:11px;opacity:.7">' + err.message + '</code>');
+      setDiag('diagServer', 'red', '⚠️ Server unreachable');
+    } finally {
+      analyzeBtn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.innerHTML = '🔍 &nbsp;Analyze Cell';
     }
+  });
 
-    function reset() {
-        selectedFile = null;
-        document.getElementById('file-input').value            = '';
-        document.getElementById('preview-section').style.display = 'none';
-        document.getElementById('result-section').style.display  = 'none';
-        document.getElementById('predict-btn').disabled          = true;
+  /* ── Inline Error ── */
+  function showInlineError(msg) {
+    let el = document.getElementById('inlineError');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'inlineError';
+      el.style.cssText = 'margin-top:16px;padding:14px 18px;background:rgba(239,83,80,0.1);border:1px solid rgba(239,83,80,0.3);border-radius:12px;font-size:13px;color:#ef9a9a;display:flex;align-items:flex-start;gap:10px;line-height:1.6';
+      document.querySelector('.card').appendChild(el);
     }
+    el.innerHTML = '<span style="font-size:18px;flex-shrink:0;margin-top:1px">⚠️</span><div><strong style="display:block;margin-bottom:4px;color:#ef5350;font-size:13px">Error</strong>' + msg + '</div>';
+    el.style.display = 'flex';
+  }
+
+  function hideInlineError() {
+    const el = document.getElementById('inlineError');
+    if (el) el.style.display = 'none';
+  }
+
+  /* ── Show Result ── */
+  function showResult(data) {
+    const isParasitized = data.prediction === 'Parasitized';
+    const cls = isParasitized ? 'parasitized' : 'uninfected';
+
+    const chip = document.getElementById('verdictChip');
+    chip.className = 'verdict-chip ' + cls;
+    document.getElementById('verdictLabel').textContent = data.prediction;
+
+    animateCounter(document.getElementById('confidenceNum'), data.confidence, 900);
+    document.getElementById('confidenceNum').className = 'confidence-num ' + cls;
+
+    document.getElementById('pParasitized').textContent = data.parasitized_probability + '%';
+    document.getElementById('pUninfected').textContent  = data.uninfected_probability  + '%';
+
+    setTimeout(() => {
+      document.getElementById('barParasitized').style.width = data.parasitized_probability + '%';
+      document.getElementById('barUninfected').style.width  = data.uninfected_probability  + '%';
+    }, 100);
+
+    const t = data.timestamp.split(' ');
+    document.getElementById('metaTime').textContent = t[1] || data.timestamp;
+    const fn = selectedFile ? selectedFile.name : '—';
+    document.getElementById('metaFile').textContent = fn.length > 16 ? fn.slice(0, 16) + '…' : fn;
+
+    resultEmpty.style.display = 'none';
+    resultContent.classList.add('show');
+  }
+
+  /* ── Reset Result ── */
+  function resetResult() {
+    resultContent.classList.remove('show');
+    resultEmpty.style.display = '';
+    document.getElementById('barParasitized').style.width = '0%';
+    document.getElementById('barUninfected').style.width  = '0%';
+  }
+
+  /* ── Counter Animation ── */
+  function animateCounter(el, target, duration) {
+    const start = performance.now();
+    function step(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * ease);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
+  /* ── Diagnostics helpers ── */
+  function setDiag(dotId, color, text) {
+    const colors = { cyan: '#4fc3f7', green: '#66bb6a', red: '#ef5350', amber: '#ffa726' };
+    const dot = document.getElementById(dotId);
+    const txt = document.getElementById(dotId + 'Txt');
+    if (dot) dot.style.background = colors[color] || color;
+    if (txt) txt.textContent = text;
+  }
+
+  /* ── On load: ping /health ── */
+  (async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      setDiag('diagServer', 'green', 'Server online');
+      if (d.model_loaded) {
+        setDiag('diagModel', 'green', 'Model loaded ✓');
+      } else {
+        setDiag('diagModel', 'red', 'Model NOT loaded — ' + (d.model_error || 'no .keras file'));
+      }
+    } catch(e) {
+      setDiag('diagServer', 'red', 'Server offline');
+      setDiag('diagModel',  'red', 'Cannot reach Flask');
+    }
+  })();
 </script>
+
 </body>
 </html>
